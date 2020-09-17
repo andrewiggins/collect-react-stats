@@ -1,7 +1,7 @@
 import puppeteer from "puppeteer";
 import fetch from "node-fetch";
 import AbortController from "abort-controller";
-import { containsReact, injectReactCounters } from "./collectors.js";
+import { containsReact, injectReactCounters } from "./inject.js";
 
 let id = 0;
 
@@ -34,10 +34,10 @@ async function setupCollection(page) {
 		controller.abort();
 	});
 
-	page.exposeFunction("__COLLECT_REACT_STATS__", function (id, time, count) {
+	page.exposeFunction("__COLLECT_REACT_STATS__", function (id, time, vnodes) {
 		const stats = statsMap.get(id);
-		stats.logs.push({ time, vnodes: count });
-		stats.vnodes.total += count;
+		stats.logs.push({ time, vnodes });
+		stats.vnodes.total += vnodes.length;
 	});
 
 	page.on("request", async (request) => {
@@ -99,10 +99,6 @@ async function setupCollection(page) {
 			body,
 		});
 	});
-
-	// TODO: Consider how to report data from page to nodejs
-	// Perhaps exposeFunction: https://pptr.dev/#?product=Puppeteer&version=v5.3.0&show=api-pageexposefunctionname-puppeteerfunction
-	// Perhaps page.on('console'): https://pptr.dev/#?product=Puppeteer&version=v5.3.0&show=api-event-console
 
 	return async () => Array.from(statsMap.values());
 }

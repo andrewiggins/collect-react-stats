@@ -1,4 +1,15 @@
+import path from "path";
+import { fileURLToPath } from "url";
+import { readFileSync } from "fs";
+
 const createElementReturn = /return{\$\$typeof:([a-zA-z]+),type:([a-zA-z]+),key:([a-zA-z]+),ref:([a-zA-z]+),props:([a-zA-z]+),_owner:/;
+
+// @ts-ignore
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const reportJsTemplate = readFileSync(
+	path.join(__dirname, "injectionHelpers.js"),
+	"utf8"
+);
 
 // 6 occurrences of "return{$typeof:"
 //
@@ -6,7 +17,7 @@ const createElementReturn = /return{\$\$typeof:([a-zA-z]+),type:([a-zA-z]+),key:
 // 2. cloneAndReplaceKey
 // 3. cloneElement
 // 4. lazy
-// 5 forwardRef
+// 5. forwardRef
 // 6. memo
 //
 // 2 additional occurrences of "$$typeof:"
@@ -27,12 +38,16 @@ export function containsReact(scriptText) {
  * @returns {string}
  */
 export function injectReactCounters(id, scriptText) {
-	return scriptText.replace(
+	const helpers = reportJsTemplate.replace(/__ID__/g, id) + "\n\n";
+	const newBody = scriptText.replace(
 		createElementReturn,
-		(substring, typeOfValue, typeValue, keyValue, refValue, propsValue) => {
+		(substring, $$typeofVar, typeVar, keyVar, refVar, propsVar) => {
 			return (
-				`window.__COLLECT_REACT_STATS__("${id}", Date.now(), 1);` + substring
+				`reportVNode${id}({ $$typeof: ${$$typeofVar}, type: ${typeVar} });` +
+				substring
 			);
 		}
 	);
+
+	return helpers + newBody;
 }
