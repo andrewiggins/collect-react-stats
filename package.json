@@ -28,6 +28,8 @@
     }
   },
   "dependencies": {
+    "abort-controller": "^3.0.0",
+    "node-fetch": "^2.6.1",
     "sade": "^1.7.3"
   },
   "peerDependencies": {

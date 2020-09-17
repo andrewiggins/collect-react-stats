@@ -1,4 +1,6 @@
 import puppeteer from "puppeteer";
+import fetch from "node-fetch";
+import AbortController from "abort-controller";
 
 /**
  * @param {puppeteer.Browser} browser
@@ -11,16 +13,61 @@ async function exitWithError(browser, errorMessage) {
 
 /**
  * @param {puppeteer.Page} page
- * @returns {Promise<() => Promise<ReactStats>>}
+ * @returns {Promise<() => Promise<ReactStats[]>>}
  */
 async function setupCollection(page) {
+	// TODO: Create a map of IDs to ReactStat objects. Each request that contains
+	// React gets it's own ID that is used in the injected code to identify this
+	// React instance. Pages should call the exposed function with their id and
+	// their stats so we can add the stats to the right React instance.
+
 	await page.setRequestInterception(true);
+
+	const controller = new AbortController();
+	page.on("close", () => {
+		console.log("Closing page...");
+		controller.abort();
+	});
+
 	page.on("request", async (request) => {
-		// TODO: see samples for modifying responses
-		// https://github.com/puppeteer/puppeteer/issues/1229#issuecomment-357469434
-		// https://github.com/puppeteer/puppeteer/issues/599#issuecomment-627366418
-		// https://stackoverflow.com/questions/51596858/manually-change-response-url-during-puppeteer-request-interception
-		await request.continue();
+		if (request.resourceType() !== "script") {
+			return request.continue();
+		}
+
+		/** @type {import('node-fetch').RequestInit} */
+		const requestInit = {
+			method: request.method(),
+			headers: request.headers(),
+			body: request.postData(),
+			follow: 20,
+			signal: controller.signal,
+		};
+
+		console.log(`[${request.frame().url()}]: Fetching ${request.url()} ...`);
+
+		let response;
+		try {
+			response = await fetch(request.url(), requestInit);
+		} catch (error) {
+			if (error.name === "AbortError") {
+				await request.abort();
+				return;
+			} else {
+				throw error;
+			}
+		}
+
+		/** @type {Record<string, string>} */
+		const headers = {};
+		response.headers.forEach((value, name) => {
+			headers[name] = value;
+		});
+
+		await request.respond({
+			status: response.status,
+			headers,
+			body: await response.buffer(),
+		});
 	});
 
 	// TODO: Consider how to report data from page to nodejs
@@ -28,16 +75,19 @@ async function setupCollection(page) {
 	// Perhaps page.on('console'): https://pptr.dev/#?product=Puppeteer&version=v5.3.0&show=api-event-console
 
 	return async () => {
-		return { vnodes: { total: 0 } };
+		return [{ id: "", frameUrl: "", jsUrl: "", vnodes: { total: 0 } }];
 	};
 }
 
 /**
  * @typedef ReactStats
+ * @property {string} id
+ * @property {string} frameUrl
+ * @property {string} jsUrl
  * @property {{ total: number }} vnodes
  *
  * @param {string} url
- * @returns {Promise<ReactStats>}
+ * @returns {Promise<ReactStats[]>}
  */
 export async function collectStats(url) {
 	console.log("Launching browser...");
@@ -59,7 +109,7 @@ export async function collectStats(url) {
 	const getStats = await setupCollection(page);
 	console.log("Collecting stats on the first tab...");
 
-	await await new Promise((resolve) => {
+	await new Promise((resolve) => {
 		browser.on("disconnected", () => resolve());
 	});
 
