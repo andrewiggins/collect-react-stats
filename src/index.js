@@ -3,6 +3,8 @@ import fetch from "node-fetch";
 import AbortController from "abort-controller";
 import { containsReact, injectReactCounters } from "./collectors.js";
 
+let id = 0;
+
 /**
  * @param {puppeteer.Browser} browser
  * @param {string} errorMessage
@@ -21,6 +23,8 @@ async function setupCollection(page) {
 	// React gets it's own ID that is used in the injected code to identify this
 	// React instance. Pages should call the exposed function with their id and
 	// their stats so we can add the stats to the right React instance.
+	/** @type {Map<string, ReactStats>} */
+	const statsMap = new Map();
 
 	await page.setRequestInterception(true);
 
@@ -28,6 +32,12 @@ async function setupCollection(page) {
 	page.on("close", () => {
 		console.log("Closing page...");
 		controller.abort();
+	});
+
+	page.exposeFunction("__COLLECT_REACT_STATS__", function (id, time, count) {
+		const stats = statsMap.get(id);
+		stats.logs.push({ time, vnodes: count });
+		stats.vnodes.total += count;
 	});
 
 	page.on("request", async (request) => {
@@ -61,10 +71,20 @@ async function setupCollection(page) {
 
 		let body = await response.text();
 		if (containsReact(body)) {
+			const statsId = id.toString();
+			statsMap.set(statsId, {
+				id: statsId,
+				frameUrl,
+				requestUrl,
+				vnodes: { total: 0 },
+				logs: [],
+			});
+
+			body = injectReactCounters(statsId, body);
+
 			console.log(`React!! [${frameUrl}]: Fetched ${requestUrl}`);
-			body = injectReactCounters(body);
 		} else {
-			console.log(`[${frameUrl}]: Fetched ${requestUrl}`);
+			// console.log(`[${frameUrl}]: Fetched ${requestUrl}`);
 		}
 
 		/** @type {Record<string, string>} */
@@ -84,17 +104,16 @@ async function setupCollection(page) {
 	// Perhaps exposeFunction: https://pptr.dev/#?product=Puppeteer&version=v5.3.0&show=api-pageexposefunctionname-puppeteerfunction
 	// Perhaps page.on('console'): https://pptr.dev/#?product=Puppeteer&version=v5.3.0&show=api-event-console
 
-	return async () => {
-		return [{ id: "", frameUrl: "", jsUrl: "", vnodes: { total: 0 } }];
-	};
+	return async () => Array.from(statsMap.values());
 }
 
 /**
  * @typedef ReactStats
  * @property {string} id
  * @property {string} frameUrl
- * @property {string} jsUrl
+ * @property {string} requestUrl
  * @property {{ total: number }} vnodes
+ * @property {Array<{ time: number; vnodes: number }>} logs
  *
  * @param {string} url
  * @returns {Promise<ReactStats[]>}

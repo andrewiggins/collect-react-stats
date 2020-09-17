@@ -19,7 +19,7 @@ async function run(url, opts) {
 
 sade("react-stats [file]", true)
 	.describe("Collect stats about React usage on a website")
-	.example("https://facebook.com")
+	.example("https://reactjs.org")
 	.option("-o --output", "File to output results to", "react-stats.json")
 	.action(run)
 	.parse(process.argv);
