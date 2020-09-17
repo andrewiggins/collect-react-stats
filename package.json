@@ -1,0 +1,42 @@
+{
+  "name": "react-stats",
+  "type": "module",
+  "version": "0.0.0",
+  "description": "CLI to collect stats about React usage on a website",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andrewiggins/react-stats.git"
+  },
+  "author": "Andre Wiggins",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/andrewiggins/react-stats/issues"
+  },
+  "homepage": "https://github.com/andrewiggins/react-stats#readme",
+  "lint-staged": {
+    "**/*.{js,jsx,ts,tsx}": [
+      "prettier --write"
+    ]
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "dependencies": {
+    "sade": "^1.7.3"
+  },
+  "peerDependencies": {
+    "puppeteer": "^5.3.0"
+  },
+  "devDependencies": {
+    "husky": "^4.3.0",
+    "lint-staged": "^10.4.0",
+    "prettier": "^2.1.2",
+    "puppeteer": "^5.3.0"
+  }
+}
