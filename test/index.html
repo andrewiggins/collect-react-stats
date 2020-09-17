@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Sample React page</title>
+	</head>
+	<body>
+		<div id="root"></div>
+		<script
+			src="https://unpkg.com/react@16.13.1/umd/react.production.min.js"
+			type="text/javascript"
+		></script>
+		<script
+			src="https://unpkg.com/react-dom@16.13.1/umd/react-dom.production.min.js"
+			type="text/javascript"
+		></script>
+		<script type="text/javascript">
+			function fakeImport(result, delayMs) {
+				return {
+					then(onResolve, onReject) {
+						setTimeout(() => {
+							if (result instanceof Error) {
+								onReject(result);
+							} else {
+								onResolve({ default: result });
+							}
+						}, delayMs);
+					},
+				};
+			}
+
+			function randomInt(max = 4, min = 1) {
+				return Math.floor(Math.random() * (max - min) + min);
+			}
+		</script>
+		<script type="text/javascript">
+			const {
+				createElement: h,
+				Fragment,
+				StrictMode,
+				createContext,
+				forwardRef,
+				memo,
+				lazy,
+				Suspense,
+				useState,
+				useRef,
+				useEffect,
+			} = React;
+			const { render } = ReactDOM;
+
+			const NameContext = createContext(null);
+
+			const Button = forwardRef((props, ref) => {
+				return h("button", { ...props, ref });
+			});
+
+			const Memoed = memo((props) =>
+				h("span", {}, "Computed value: ", props.value * 1000)
+			);
+
+			function Loading({ id }) {
+				return h("div", {}, `Loading #${id}...`);
+			}
+
+			function createLazy(id) {
+				return lazy(() =>
+					fakeImport(
+						() => h("div", {}, `Lazy Loaded #${id}!`),
+						randomInt() * 1000
+					)
+				);
+			}
+
+			function App() {
+				const [count, setCount] = useState(0);
+				const [computeValue, setComputeValue] = useState(randomInt());
+				const [isRefValid, setIsRefValid] = useState(null);
+				const ref = useRef(null);
+
+				useEffect(() => {
+					if (ref.current) {
+						setIsRefValid(ref.current.tagName === "BUTTON");
+					}
+				}, [ref.current]);
+
+				function increment() {
+					setCount(count + 1);
+				}
+
+				function recompute() {
+					setComputeValue(randomInt());
+				}
+
+				return h(
+					StrictMode,
+					{},
+					h(
+						NameContext.Provider,
+						{ value: "World" },
+						h(NameContext.Consumer, {}, (name) =>
+							h("div", {}, "Hello ", h(Fragment, {}, name, "!"))
+						)
+					),
+					h(
+						"div",
+						{},
+						h(Fragment, {}, "count: ", count),
+						" ",
+						h(Button, { ref, onClick: increment }, "+1")
+					),
+					h(
+						"div",
+						{},
+						h(Fragment, {}, "Is ref valid: "),
+						isRefValid?.toString() ?? "null"
+					),
+					h(
+						"div",
+						{},
+						h(Memoed, { value: computeValue }),
+						" ",
+						h(Button, { onClick: recompute }, "Recompute")
+					),
+					h(Suspense, { fallback: h(Loading, { id: 1 }) }, h(createLazy(1)))
+				);
+			}
+
+			const root = document.getElementById("root");
+			render(h(App), root);
+		</script>
+	</body>
+</html>
