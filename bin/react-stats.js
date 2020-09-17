@@ -6,7 +6,7 @@ import sade from "sade";
 import { collectStats } from "../src/index.js";
 
 async function run(url, opts) {
-	const results = await collectStats(url);
+	const results = await collectStats(url, opts);
 	const resultJSON = JSON.stringify(results, null, 2);
 
 	const outputFile = path.isAbsolute(opts.output)
@@ -21,5 +21,6 @@ sade("react-stats [file]", true)
 	.describe("Collect stats about React usage on a website")
 	.example("https://reactjs.org")
 	.option("-o --output", "File to output results to", "react-stats.json")
+	.option("-d --debug", "Enable extra logging and debugging", false)
 	.action(run)
 	.parse(process.argv);

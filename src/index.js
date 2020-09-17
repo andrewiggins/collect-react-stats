@@ -6,19 +6,35 @@ import { containsReact, injectReactCounters } from "./inject.js";
 let id = 0;
 
 /**
- * @param {puppeteer.Browser} browser
- * @param {string} errorMessage
+ * @param {() => puppeteer.Browser} getBrowser
+ * @param {Options} options
  */
-async function exitWithError(browser, errorMessage) {
-	await browser.close();
-	throw new Error(errorMessage);
+function createLogger(getBrowser, options) {
+	return {
+		debug(...args) {
+			if (options.debug) {
+				console.log(...args);
+			}
+		},
+		info(...args) {
+			console.log(...args);
+		},
+		warn(...args) {
+			console.warn(...args);
+		},
+		async error(errorMessage) {
+			await getBrowser()?.close();
+			throw new Error(errorMessage);
+		},
+	};
 }
 
 /**
  * @param {puppeteer.Page} page
+ * @param {Logger} logger
  * @returns {Promise<() => Promise<ReactStats[]>>}
  */
-async function setupCollection(page) {
+async function setupCollection(page, logger) {
 	// TODO: Create a map of IDs to ReactStat objects. Each request that contains
 	// React gets it's own ID that is used in the injected code to identify this
 	// React instance. Pages should call the exposed function with their id and
@@ -30,7 +46,7 @@ async function setupCollection(page) {
 
 	const controller = new AbortController();
 	page.on("close", () => {
-		console.log("Closing page...");
+		logger.debug("Closing page...");
 		controller.abort();
 	});
 
@@ -82,9 +98,9 @@ async function setupCollection(page) {
 
 			body = injectReactCounters(statsId, body);
 
-			console.log(`React!! [${frameUrl}]: Fetched ${requestUrl}`);
+			logger.debug(`React!! [${frameUrl}]: Fetched ${requestUrl}`);
 		} else {
-			// console.log(`[${frameUrl}]: Fetched ${requestUrl}`);
+			// logger.debug(`[${frameUrl}]: Fetched ${requestUrl}`);
 		}
 
 		/** @type {Record<string, string>} */
@@ -111,12 +127,21 @@ async function setupCollection(page) {
  * @property {{ total: number }} vnodes
  * @property {Array<{ time: number; vnodes: number }>} logs
  *
+ * @typedef Options
+ * @property {boolean} debug
+ *
+ * @typedef {ReturnType<createLogger>} Logger
+ *
  * @param {string} url
+ * @param {Options} options
  * @returns {Promise<ReactStats[]>}
  */
-export async function collectStats(url) {
-	console.log("Launching browser...");
-	const browser = await puppeteer.launch({
+export async function collectStats(url, options) {
+	let browser;
+	const logger = createLogger(() => browser, options);
+
+	logger.debug("Launching browser...");
+	browser = await puppeteer.launch({
 		headless: false,
 		defaultViewport: null,
 	});
@@ -129,12 +154,12 @@ export async function collectStats(url) {
 		}
 	}
 
-	const getStats = await setupCollection(page);
+	const getStats = await setupCollection(page, logger);
 	if (url) {
 		page.goto(url);
 	}
 
-	console.log("Collecting stats on the second tab...");
+	logger.debug("Collecting stats...");
 
 	await new Promise((resolve) => {
 		browser.on("disconnected", () => resolve());
