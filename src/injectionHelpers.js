@@ -8,7 +8,6 @@ let singleChildStats = new Map();
 // TODO: Investigate a way to count text nodes...
 
 function reportVNode__ID__($$typeof, type, key, ref, props) {
-	const typeName = getTypeName(type);
 	const isChildArray = Array.isArray(props.children);
 	const childrenLength = isChildArray
 		? props.children.length
@@ -28,7 +27,7 @@ function reportVNode__ID__($$typeof, type, key, ref, props) {
 			category = "function";
 		}
 	} else {
-		category = typeName;
+		category = getTypeName(type);
 	}
 
 	let categoryStats = vNodeStats.get(category);

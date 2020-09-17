@@ -30,38 +30,115 @@ function createLogger(getBrowser, options) {
 }
 
 /**
+ * @typedef {{ total: number; data: Record<string, number> }} Row
+ * @typedef {{ total: Row, rows: Record<string, Row> }} Table
+ *
+ * @typedef ReactStatsSummary
+ * @property {Table} vnodes
+ * @property {Row} singleChild
+ *
+ * @typedef {ReactStats & { summary: ReactStatsSummary }} SummarizedReactStats
+ *
+ * @param {Map<string, ReactStats>} statsMap
+ * @returns {SummarizedReactStats[]}
+ */
+function summarizeStats(statsMap) {
+	/** @type {SummarizedReactStats[]} */
+	const summarizedStats = [];
+	for (const stats of statsMap.values()) {
+		/** @type {Table} */
+		const vNodeTable = {
+			total: { total: 0, data: {} },
+			rows: {},
+		};
+
+		/** @type {Row} */
+		const singleChildRow = {
+			total: 0,
+			data: {},
+		};
+
+		for (const log of stats.logs) {
+			for (let [category, childrenCounts] of log.vNodeStats) {
+				for (let [numberOfChildren, count] of childrenCounts) {
+					const row = category;
+					const column = numberOfChildren.toString();
+
+					if (row in vNodeTable.rows) {
+						vNodeTable.rows[row].total += count;
+					} else {
+						vNodeTable.rows[row] = { total: count, data: {} };
+					}
+
+					if (column in vNodeTable.rows[row].data) {
+						vNodeTable.rows[row].data[column] += count;
+					} else {
+						vNodeTable.rows[row].data[column] = count;
+					}
+
+					vNodeTable.total.total += count;
+					if (column in vNodeTable.total.data) {
+						vNodeTable.total.data[column] += count;
+					} else {
+						vNodeTable.total.data[column] = count;
+					}
+				}
+			}
+
+			for (let [category, count] of log.singleChildStats) {
+				singleChildRow.total += count;
+
+				if (category in singleChildRow.data) {
+					singleChildRow.data[category] += count;
+				} else {
+					singleChildRow.data[category] = count;
+				}
+			}
+		}
+
+		// summary.vnodes.total += log.vNodeStats
+		// 	.map((category) => category[1].map((childCount) => childCount[1]))
+		// 	.flat(2)
+		// 	.reduce((total, subtotal) => total + subtotal, 0);
+
+		summarizedStats.push({
+			id: stats.id,
+			frameUrl: stats.frameUrl,
+			requestUrl: stats.requestUrl,
+			summary: {
+				vnodes: vNodeTable,
+				singleChild: singleChildRow,
+			},
+			logs: stats.logs,
+		});
+	}
+
+	return summarizedStats;
+}
+
+/**
  * @param {puppeteer.Page} page
  * @param {Logger} logger
- * @returns {Promise<() => Promise<ReactStats[]>>}
+ * @returns {Promise<() => SummarizedReactStats[]>}
  */
 async function setupCollection(page, logger) {
 	/** @type {Map<string, ReactStats>} */
 	const statsMap = new Map();
 
-	/**
-	 * @param {string} id
-	 * @param {number} time
-	 * @param {ReactStatLog["vNodeStats"]} vNodeStats
-	 * @param {ReactStatLog["singleChildStats"]} singleChildStats
-	 */
-	function collectStats(id, time, vNodeStats, singleChildStats) {
-		const stats = statsMap.get(id);
-		stats.logs.push({ time, vNodeStats, singleChildStats });
-		stats.vnodes.total += vNodeStats
-			.map((category) => category[1].map((childCount) => childCount[1]))
-			.flat(2)
-			.reduce((total, subtotal) => total + subtotal, 0);
-	}
-
 	await page.setRequestInterception(true);
+
+	page.exposeFunction(
+		"__COLLECT_REACT_STATS__",
+		(id, time, vNodeStats, singleChildStats) => {
+			statsMap.get(id).logs.push({ time, vNodeStats, singleChildStats });
+		}
+	);
 
 	const controller = new AbortController();
 	page.on("close", () => {
 		logger.debug("Closing page...");
 		controller.abort();
 	});
-
-	page.exposeFunction("__COLLECT_REACT_STATS__", collectStats);
 
 	page.on("request", async (request) => {
 		if (request.resourceType() !== "script") {
@@ -101,7 +178,6 @@ async function setupCollection(page, logger) {
 				id: statsId,
 				frameUrl,
 				requestUrl,
-				vnodes: { total: 0 },
 				logs: [],
 			});
 
@@ -125,7 +201,7 @@ async function setupCollection(page, logger) {
 		});
 	});
 
-	return async () => Array.from(statsMap.values());
+	return () => summarizeStats(statsMap);
 }
 
 /**
@@ -133,10 +209,9 @@ async function setupCollection(page, logger) {
  * @property {string} id
  * @property {string} frameUrl
  * @property {string} requestUrl
- * @property {{ total: number }} vnodes
- * @property {ReactStatLog[]} logs
+ * @property {ReactStatsLog[]} logs
  *
- * @typedef ReactStatLog
+ * @typedef ReactStatsLog
  * @property {number} time
  * @property {Array<[string, [number, number][]]>} vNodeStats
  * @property {Array<[string, number]>} singleChildStats
@@ -148,7 +223,7 @@ async function setupCollection(page, logger) {
  *
  * @param {string} url
  * @param {Options} options
- * @returns {Promise<ReactStats[]>}
+ * @returns {Promise<SummarizedReactStats[]>}
  */
 export async function collectStats(url, options) {
 	let browser;
