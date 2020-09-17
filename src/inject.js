@@ -43,7 +43,7 @@ export function injectReactCounters(id, scriptText) {
 		createElementReturn,
 		(substring, $$typeofVar, typeVar, keyVar, refVar, propsVar) => {
 			return (
-				`reportVNode${id}({ $$typeof: ${$$typeofVar}, type: ${typeVar} });` +
+				`reportVNode${id}(${$$typeofVar}, ${typeVar}, ${keyVar}, ${refVar}, ${propsVar});` +
 				substring
 			);
 		}
