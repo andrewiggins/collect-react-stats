@@ -1,6 +1,7 @@
 import puppeteer from "puppeteer";
 import fetch from "node-fetch";
 import AbortController from "abort-controller";
+import { containsReact, injectReactCounters } from "./collectors.js";
 
 /**
  * @param {puppeteer.Browser} browser
@@ -34,6 +35,9 @@ async function setupCollection(page) {
 			return request.continue();
 		}
 
+		const frameUrl = request.frame().url();
+		const requestUrl = request.url();
+
 		/** @type {import('node-fetch').RequestInit} */
 		const requestInit = {
 			method: request.method(),
@@ -43,11 +47,9 @@ async function setupCollection(page) {
 			signal: controller.signal,
 		};
 
-		console.log(`[${request.frame().url()}]: Fetching ${request.url()} ...`);
-
 		let response;
 		try {
-			response = await fetch(request.url(), requestInit);
+			response = await fetch(requestUrl, requestInit);
 		} catch (error) {
 			if (error.name === "AbortError") {
 				await request.abort();
@@ -55,6 +57,14 @@ async function setupCollection(page) {
 			} else {
 				throw error;
 			}
+		}
+
+		let body = await response.text();
+		if (containsReact(body)) {
+			console.log(`React!! [${frameUrl}]: Fetched ${requestUrl}`);
+			body = injectReactCounters(body);
+		} else {
+			console.log(`[${frameUrl}]: Fetched ${requestUrl}`);
 		}
 
 		/** @type {Record<string, string>} */
@@ -66,7 +76,7 @@ async function setupCollection(page) {
 		await request.respond({
 			status: response.status,
 			headers,
-			body: await response.buffer(),
+			body,
 		});
 	});
 
