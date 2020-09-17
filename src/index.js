@@ -93,21 +93,23 @@ export async function collectStats(url) {
 	console.log("Launching browser...");
 	const browser = await puppeteer.launch({
 		headless: false,
-		ignoreDefaultArgs: url ? ["about:blank"] : [],
-		args: url ? [url] : [],
 		defaultViewport: null,
 	});
 
-	const page = (await browser.pages())[0];
-	if (page == null) {
-		await exitWithError(
-			browser,
-			"Could not find page to setup stat collection on"
-		);
+	const page = await browser.newPage();
+	const pages = await browser.pages();
+	for (let otherPage of pages) {
+		if (otherPage !== page) {
+			await otherPage.close();
+		}
 	}
 
 	const getStats = await setupCollection(page);
-	console.log("Collecting stats on the first tab...");
+	if (url) {
+		page.goto(url);
+	}
+
+	console.log("Collecting stats on the second tab...");
 
 	await new Promise((resolve) => {
 		browser.on("disconnected", () => resolve());
