@@ -42,6 +42,21 @@ async function setupCollection(page, logger) {
 	/** @type {Map<string, ReactStats>} */
 	const statsMap = new Map();
 
+	/**
+	 *
+	 * @param {string} id
+	 * @param {number} time
+	 * @param {ReactStats["logs"][0]["categories"]} categories
+	 */
+	function collectStats(id, time, categories) {
+		const stats = statsMap.get(id);
+		stats.logs.push({ time, categories });
+		stats.vnodes.total += categories
+			.map((category) => category[1].map((childCount) => childCount[1]))
+			.flat(2)
+			.reduce((total, subtotal) => total + subtotal, 0);
+	}
+
 	await page.setRequestInterception(true);
 
 	const controller = new AbortController();
@@ -50,11 +65,7 @@ async function setupCollection(page, logger) {
 		controller.abort();
 	});
 
-	page.exposeFunction("__COLLECT_REACT_STATS__", function (id, time, vnodes) {
-		const stats = statsMap.get(id);
-		stats.logs.push({ time, vnodes });
-		stats.vnodes.total += vnodes.length;
-	});
+	page.exposeFunction("__COLLECT_REACT_STATS__", collectStats);
 
 	page.on("request", async (request) => {
 		if (request.resourceType() !== "script") {
@@ -88,6 +99,8 @@ async function setupCollection(page, logger) {
 		let body = await response.text();
 		if (containsReact(body)) {
 			const statsId = id.toString();
+			id++;
+
 			statsMap.set(statsId, {
 				id: statsId,
 				frameUrl,
@@ -125,7 +138,7 @@ async function setupCollection(page, logger) {
  * @property {string} frameUrl
  * @property {string} requestUrl
  * @property {{ total: number }} vnodes
- * @property {Array<{ time: number; vnodes: number }>} logs
+ * @property {Array<{ time: number; categories: Array<[string, [number, number][]]> }>} logs
  *
  * @typedef Options
  * @property {boolean} debug
