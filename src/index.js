@@ -35,23 +35,19 @@ function createLogger(getBrowser, options) {
  * @returns {Promise<() => Promise<ReactStats[]>>}
  */
 async function setupCollection(page, logger) {
-	// TODO: Create a map of IDs to ReactStat objects. Each request that contains
-	// React gets it's own ID that is used in the injected code to identify this
-	// React instance. Pages should call the exposed function with their id and
-	// their stats so we can add the stats to the right React instance.
 	/** @type {Map<string, ReactStats>} */
 	const statsMap = new Map();
 
 	/**
-	 *
 	 * @param {string} id
 	 * @param {number} time
-	 * @param {ReactStats["logs"][0]["categories"]} categories
+	 * @param {ReactStatLog["vNodeStats"]} vNodeStats
+	 * @param {ReactStatLog["singleChildStats"]} singleChildStats
 	 */
-	function collectStats(id, time, categories) {
+	function collectStats(id, time, vNodeStats, singleChildStats) {
 		const stats = statsMap.get(id);
-		stats.logs.push({ time, categories });
-		stats.vnodes.total += categories
+		stats.logs.push({ time, vNodeStats, singleChildStats });
+		stats.vnodes.total += vNodeStats
 			.map((category) => category[1].map((childCount) => childCount[1]))
 			.flat(2)
 			.reduce((total, subtotal) => total + subtotal, 0);
@@ -138,7 +134,12 @@ async function setupCollection(page, logger) {
  * @property {string} frameUrl
  * @property {string} requestUrl
  * @property {{ total: number }} vnodes
- * @property {Array<{ time: number; categories: Array<[string, [number, number][]]> }>} logs
+ * @property {ReactStatLog[]} logs
+ *
+ * @typedef ReactStatLog
+ * @property {number} time
+ * @property {Array<[string, [number, number][]]>} vNodeStats
+ * @property {Array<[string, number]>} singleChildStats
  *
  * @typedef Options
  * @property {boolean} debug
