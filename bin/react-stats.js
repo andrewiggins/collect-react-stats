@@ -5,8 +5,8 @@ import { writeFile, mkdir } from "fs/promises";
 import sade from "sade";
 import { collectStats } from "../src/index.js";
 
-async function run(file, opts) {
-	const results = await collectStats(file);
+async function run(url, opts) {
+	const results = await collectStats(url);
 	const resultJSON = JSON.stringify(results, null, 2);
 
 	const outputFile = path.isAbsolute(opts.output)
