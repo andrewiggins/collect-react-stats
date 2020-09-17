@@ -15,7 +15,11 @@ let stats = new Map();
 
 function reportVNode__ID__($$typeof, type, key, ref, props) {
 	const typeName = getTypeName(type);
-	const childrenLength = props.children?.length ?? 0;
+	const childrenLength = Array.isArray(props.children)
+		? props.children.length
+		: props.children != null
+		? 1
+		: 0;
 
 	let category;
 	if (typeof type == "string") {
