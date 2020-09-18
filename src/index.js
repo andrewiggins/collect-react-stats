@@ -1,8 +1,20 @@
+import path from "path";
+import { fileURLToPath } from "url";
+import { readFileSync } from "fs";
 import fetch from "node-fetch";
 import AbortController from "abort-controller";
-import { containsReact, injectReactCounters } from "./inject.js";
 
 let id = 0;
+const createElementReturn = /return{\$\$typeof:([a-zA-z]+),type:([a-zA-z]+),key:([a-zA-z]+),ref:([a-zA-z]+),props:([a-zA-z]+),_owner:/g;
+/** @type {(text: string) => boolean} */
+const containsReact = (text) => text.match(createElementReturn) != null;
+
+// @ts-ignore
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const reportJsTemplate = readFileSync(
+	path.join(__dirname, "injectionHelpers.js"),
+	"utf8"
+);
 
 /**
  * @param {() => import('puppeteer-core').Browser} getBrowser
@@ -99,11 +111,6 @@ function summarizeStats(statsMap) {
 			}
 		}
 
-		// summary.vnodes.total += log.vNodeStats
-		// 	.map((category) => category[1].map((childCount) => childCount[1]))
-		// 	.flat(2)
-		// 	.reduce((total, subtotal) => total + subtotal, 0);
-
 		summarizedStats.push({
 			id: stats.id,
 			frameUrl: stats.frameUrl,
@@ -117,6 +124,26 @@ function summarizeStats(statsMap) {
 	}
 
 	return summarizedStats;
+}
+
+/**
+ * @param {string} id
+ * @param {string} scriptText
+ * @returns {string}
+ */
+function injectReactCounters(id, scriptText) {
+	const helpers = reportJsTemplate.replace(/__ID__/g, id) + "\n\n";
+	const newBody = scriptText.replace(
+		createElementReturn,
+		(substring, $$typeofVar, typeVar, keyVar, refVar, propsVar) => {
+			return (
+				`reportVNode${id}(${$$typeofVar}, ${typeVar}, ${keyVar}, ${refVar}, ${propsVar});` +
+				substring
+			);
+		}
+	);
+
+	return helpers + newBody;
 }
 
 /**
@@ -154,7 +181,9 @@ async function setupCollection(page, logger) {
 			!request.url().startsWith("http") &&
 			!request.url().startsWith("https:")
 		) {
-			logger.warn("Skipping non http(s) URL: " + request.url().slice(0, 100));
+			logger.warn(
+				"Skipping non http(s) URL: " + request.url().slice(0, 100) + "..."
+			);
 			return request.continue();
 		}
 
