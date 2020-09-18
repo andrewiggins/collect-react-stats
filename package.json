@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "description": "CLI to collect stats about React usage on a website",
   "main": "src/index.js",
+  "bin": "bin/react-stats.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -27,6 +28,10 @@
       "pre-commit": "lint-staged"
     }
   },
+  "files": [
+    "bin",
+    "src"
+  ],
   "dependencies": {
     "abort-controller": "^3.0.0",
     "asciichart": "^1.5.25",
