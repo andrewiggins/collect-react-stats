@@ -11,25 +11,13 @@ function reportVNode__ID__($$typeof, type, key, ref, props) {
 	const isChildArray = Array.isArray(props.children);
 	const childrenLength = isChildArray
 		? props.children.length
-		: props.children != null
+		: "children" in props
 		? 1
 		: 0;
 
 	// Category stats
 
-	let category;
-	if (typeof type == "string") {
-		category = "dom";
-	} else if (typeof type == "function") {
-		if (type.prototype.render) {
-			category = "class";
-		} else {
-			category = "function";
-		}
-	} else {
-		category = getTypeName(type);
-	}
-
+	let category = getVNodeCategory(type);
 	let categoryStats = vNodeStats.get(category);
 	if (!categoryStats) {
 		vNodeStats.set(category, (categoryStats = new Map()));
@@ -40,27 +28,11 @@ function reportVNode__ID__($$typeof, type, key, ref, props) {
 
 	// Single child stats
 	if (childrenLength == 1) {
-		const singleChild = isChildArray ? props.children[0] : props.children;
-		let singleChildType;
-		if (
-			typeof singleChild == "string" ||
-			typeof singleChild == "number" ||
-			typeof singleChild == "boolean" ||
-			typeof singleChild == "bigint"
-		) {
-			singleChildType = "text";
-		} else if (typeof singleChild == "function") {
-			singleChildType = "function";
-		} else if (singleChild.type != null) {
-			singleChildType = getTypeName(singleChild);
-		} else {
-			singleChildType = "unknown";
-		}
+		const child = isChildArray ? props.children[0] : props.children;
+		const childCategory = getChildCategory(child);
 
-		singleChildStats.set(
-			singleChildType,
-			singleChildStats.get(singleChildType) ?? 0 + 1
-		);
+		const prevCount = singleChildStats.get(childCategory) ?? 0;
+		singleChildStats.set(childCategory, prevCount + 1);
 	}
 
 	if (!timeout) {
@@ -85,26 +57,43 @@ function fileReport__ID__() {
 
 	timeout = null;
 	vNodeStats = new Map();
+	singleChildStats = new Map();
 }
 
-function getTypeOfName($$typeof) {
-	return $$typeof.toString();
-}
-
-function getTypeName(type) {
+function getVNodeCategory(type) {
 	if (type == null) {
 		return "null";
+	} else if (typeof type == "string") {
+		return "dom";
 	} else if (typeof type == "function") {
-		return type.name;
+		return type.prototype.render ? "class" : "function";
 	} else if (typeof type == "object") {
 		if (type.$$typeof !== Symbol.for("react.element")) {
 			return type.$$typeof.toString();
 		} else if (type.type) {
-			return getTypeName(type.type);
+			return getVNodeCategory(type.type);
 		} else {
 			return type.toString();
 		}
 	} else {
 		return type.toString();
+	}
+}
+
+function getChildCategory(child) {
+	if (child == null || typeof child == "boolean") {
+		return "null";
+	} else if (
+		typeof child == "string" ||
+		typeof child == "number" ||
+		typeof child == "bigint"
+	) {
+		return "text";
+	} else if (typeof child == "function") {
+		return "function";
+	} else if (typeof child == "object") {
+		return getVNodeCategory(child.type);
+	} else {
+		return "unknown";
 	}
 }

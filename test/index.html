@@ -75,6 +75,25 @@
 
 			const Lazy = createLazy(1);
 
+			function ChildrenTest() {
+				return h(
+					"div",
+					{},
+					undefined,
+					null,
+					true,
+					false,
+					"a string",
+					10n,
+					h(Fragment, {}, undefined),
+					h(Fragment, {}, null),
+					h(Fragment, {}, true),
+					h(Fragment, {}, false),
+					h(Fragment, {}, "a string"),
+					h(Fragment, {}, 10n)
+				);
+			}
+
 			function App() {
 				const [count, setCount] = useState(0);
 				const [computeValue, setComputeValue] = useState(randomInt());
@@ -125,7 +144,8 @@
 						" ",
 						h(Button, { onClick: recompute }, "Recompute")
 					),
-					h(Suspense, { fallback: h(Loading, { id: 1 }) }, h(Lazy))
+					h(Suspense, { fallback: h(Loading, { id: 1 }) }, h(Lazy)),
+					h(ChildrenTest)
 				);
 			}
 
