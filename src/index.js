@@ -239,7 +239,7 @@ async function setupCollection(page, logger) {
  * @param {Options} options
  * @returns {Promise<SummarizedReactStats[]>}
  */
-export async function collectStats(url, options) {
+export async function collectReactStats(url, options) {
 	let browser;
 	const logger = createLogger(() => browser, options);
 

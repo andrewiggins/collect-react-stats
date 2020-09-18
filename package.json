@@ -1,23 +1,23 @@
 {
-  "name": "react-stats",
+  "name": "collect-react-stats",
   "type": "module",
   "version": "0.0.0",
   "description": "CLI to collect stats about React usage on a website",
   "main": "src/index.js",
-  "bin": "bin/react-stats.js",
+  "bin": "bin/collect-react-stats.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/andrewiggins/react-stats.git"
+    "url": "git+https://github.com/andrewiggins/collect-react-stats.git"
   },
   "author": "Andre Wiggins",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/andrewiggins/react-stats/issues"
+    "url": "https://github.com/andrewiggins/collect-react-stats/issues"
   },
-  "homepage": "https://github.com/andrewiggins/react-stats#readme",
+  "homepage": "https://github.com/andrewiggins/collect-react-stats#readme",
   "lint-staged": {
     "**/*.{js,jsx,ts,tsx}": [
       "prettier --write"

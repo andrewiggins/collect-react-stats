@@ -5,7 +5,7 @@ import { writeFile, mkdir } from "fs/promises";
 import sade from "sade";
 import tableExport from "table";
 import asciichartExport from "asciichart";
-import { collectStats } from "../src/index.js";
+import { collectReactStats } from "../src/index.js";
 
 const { table, getBorderCharacters } = tableExport;
 
@@ -122,7 +122,7 @@ async function run(url, opts) {
 		"Close the browser when you are finished collecting your sample to see your results."
 	);
 
-	const results = await collectStats(url, opts);
+	const results = await collectReactStats(url, opts);
 	const resultJSON = JSON.stringify(results, null, 2);
 
 	const outputFile = path.isAbsolute(opts.output)
@@ -182,10 +182,14 @@ async function run(url, opts) {
 	}
 }
 
-sade("react-stats [file]", true)
+sade("collect-react-stats [file]", true)
 	.describe("Collect stats about React usage on a website")
 	.example("https://reactjs.org")
-	.option("-o --output", "File to output results to", "react-stats.json")
+	.option(
+		"-o --output",
+		"File to output results to",
+		"collect-react-stats.json"
+	)
 	.option("-g --graphs", "Display graphs related to stats", false)
 	.option("-d --debug", "Enable extra logging and debugging", false)
 	.action(run)
