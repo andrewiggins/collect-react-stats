@@ -85,6 +85,10 @@ function buildStatsTableFromRow(stats) {
 }
 
 async function run(url, opts) {
+	console.log(
+		"Close the browser when you are finished collecting your sample to see your results."
+	);
+
 	const results = await collectStats(url, opts);
 	const resultJSON = JSON.stringify(results, null, 2);
 
@@ -94,6 +98,11 @@ async function run(url, opts) {
 
 	await mkdir(path.dirname(outputFile), { recursive: true });
 	await writeFile(outputFile, resultJSON, "utf8");
+
+	if (results.length == 0) {
+		console.log("React not found on any webpages visited");
+		return;
+	}
 
 	for (let i = 0; i < results.length; i++) {
 		let result = results[i];
