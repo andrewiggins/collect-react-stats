@@ -46,6 +46,10 @@ function summarizeStats(statsMap) {
 	/** @type {SummarizedReactStats[]} */
 	const summarizedStats = [];
 	for (const stats of statsMap.values()) {
+		if (stats.logs.length == 0) {
+			continue;
+		}
+
 		/** @type {Table} */
 		const vNodeTable = {
 			total: { total: 0, data: {} },
