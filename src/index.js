@@ -145,6 +145,16 @@ async function setupCollection(page, logger) {
 			return request.continue();
 		}
 
+		// TODO: Investigate handling data: urls
+		// e.g. data:application/x-javascript; charset=utf-8;base64,aWYg
+		if (
+			!request.url().startsWith("http") &&
+			!request.url().startsWith("https:")
+		) {
+			logger.warn("SKIPPING NON HTTP(S) URL: " + request.url());
+			return request.continue();
+		}
+
 		const frameUrl = request.frame().url();
 		const requestUrl = request.url();
 
