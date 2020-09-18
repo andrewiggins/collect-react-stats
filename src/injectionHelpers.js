@@ -1,4 +1,6 @@
-let timeout;
+let timeout,
+	start,
+	total = 0;
 
 /** @type {Map<string, Map<number, number>>} */
 let vNodeStats = new Map();
@@ -15,8 +17,10 @@ function reportVNode__ID__($$typeof, type, key, ref, props) {
 		? 1
 		: 0;
 
-	// Category stats
+	// Total count
+	total += 1;
 
+	// Category stats
 	let category = getVNodeCategory(type);
 	let categoryStats = vNodeStats.get(category);
 	if (!categoryStats) {
@@ -36,6 +40,7 @@ function reportVNode__ID__($$typeof, type, key, ref, props) {
 	}
 
 	if (!timeout) {
+		start = Date.now();
 		timeout = setTimeout(fileReport__ID__, 0);
 	}
 }
@@ -47,14 +52,26 @@ function fileReport__ID__() {
 
 	const serializedSingleChildStats = Array.from(singleChildStats.entries());
 
+	let end = Date.now();
+	let duration = end - start;
+	let rate = total / duration;
+	let timing = {
+		start,
+		end,
+		total,
+		rate,
+	};
+
 	// @ts-ignore - __COLLECT_REACT_STATS__ exists, trust me
 	window.__COLLECT_REACT_STATS__(
 		"__ID__",
-		Date.now(),
+		timing,
 		serializedVNodeStats,
 		serializedSingleChildStats
 	);
 
+	total = 0;
+	start = null;
 	timeout = null;
 	vNodeStats = new Map();
 	singleChildStats = new Map();

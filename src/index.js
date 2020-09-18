@@ -133,8 +133,8 @@ async function setupCollection(page, logger) {
 
 	page.exposeFunction(
 		"__COLLECT_REACT_STATS__",
-		(id, time, vNodeStats, singleChildStats) => {
-			statsMap.get(id).logs.push({ time, vNodeStats, singleChildStats });
+		(id, timing, vNodeStats, singleChildStats) => {
+			statsMap.get(id).logs.push({ timing, vNodeStats, singleChildStats });
 		}
 	);
 
@@ -226,7 +226,7 @@ async function setupCollection(page, logger) {
  * @property {ReactStatsLog[]} logs
  *
  * @typedef ReactStatsLog
- * @property {number} time
+ * @property {{ start: number; end: number; rate: number; total: number; }} timing
  * @property {Array<[string, [number, number][]]>} vNodeStats
  * @property {Array<[string, number]>} singleChildStats
  *

@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "abort-controller": "^3.0.0",
+    "asciichart": "^1.5.25",
     "node-fetch": "^2.6.1",
     "sade": "^1.7.3",
     "table": "^6.0.3"

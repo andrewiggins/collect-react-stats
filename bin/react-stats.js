@@ -4,9 +4,14 @@ import path from "path";
 import { writeFile, mkdir } from "fs/promises";
 import sade from "sade";
 import tableExport from "table";
+import asciichartExport from "asciichart";
 import { collectStats } from "../src/index.js";
 
 const { table, getBorderCharacters } = tableExport;
+
+/** @type {import('asciichart')} */
+// @ts-ignore
+const asciichart = asciichartExport;
 
 /**
  * @param {Table} stats
@@ -84,6 +89,25 @@ function buildStatsTableFromRow(stats) {
 	return table(tableData, { border: getBorderCharacters("norc") });
 }
 
+/**
+ * @param {import('../src/index').ReactStatsLog[]} logs
+ */
+function buildRateChart(logs) {
+	const series = logs.map((log) => log.timing.rate);
+	return asciichart.plot(series, { height: 50 });
+}
+
+/**
+ * @param {import('../src/index').ReactStatsLog[]} logs
+ */
+function buildVNodeCountChart(logs) {
+	let runningSum = 0;
+	const series = logs.map(
+		(log, i) => (runningSum = runningSum + log.timing.total)
+	);
+	return asciichart.plot(series, { height: 50 });
+}
+
 async function run(url, opts) {
 	console.log(
 		"Close the browser when you are finished collecting your sample to see your results."
@@ -107,6 +131,17 @@ async function run(url, opts) {
 	for (let i = 0; i < results.length; i++) {
 		let result = results[i];
 
+		let min = Number.MAX_SAFE_INTEGER;
+		let max = 0;
+		let sum = 0;
+		for (let log of result.logs) {
+			max = Math.max(max, log.timing.rate);
+			min = Math.min(min, log.timing.rate);
+			sum += log.timing.rate;
+		}
+
+		let average = sum / result.logs.length;
+
 		console.log();
 		console.log("Results for", result.frameUrl);
 		console.log();
@@ -118,6 +153,14 @@ async function run(url, opts) {
 		console.log("Single child type:");
 		console.log(buildStatsTableFromRow(result.summary.singleChild));
 		console.log();
+		console.log("VNode creation rate:");
+		console.log("Min:", min, "Average:", average, "Max:", max);
+		console.log();
+		console.log(buildRateChart(result.logs));
+		console.log();
+		console.log("VNode count:");
+		console.log();
+		console.log(buildVNodeCountChart(result.logs));
 
 		if (i + 1 < results.length) {
 			console.log();
