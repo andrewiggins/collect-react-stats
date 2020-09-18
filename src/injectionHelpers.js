@@ -97,10 +97,10 @@ function getTypeName(type) {
 	} else if (typeof type == "function") {
 		return type.name;
 	} else if (typeof type == "object") {
-		if (type.type) {
-			return getTypeName(type.type);
-		} else if (type.$$typeof) {
+		if (type.$$typeof !== Symbol.for("react.element")) {
 			return type.$$typeof.toString();
+		} else if (type.type) {
+			return getTypeName(type.type);
 		} else {
 			return type.toString();
 		}
