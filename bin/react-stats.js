@@ -108,6 +108,15 @@ function buildVNodeCountChart(logs) {
 	return asciichart.plot(series, { height: 50 });
 }
 
+/**
+ * @typedef Options
+ * @property {boolean} debug
+ * @property {string} output
+ * @property {boolean} graphs
+ *
+ * @param {string} url
+ * @param {Options} opts
+ */
 async function run(url, opts) {
 	console.log(
 		"Close the browser when you are finished collecting your sample to see your results."
@@ -156,11 +165,15 @@ async function run(url, opts) {
 		console.log("VNode creation rate:");
 		console.log("Min:", min, "Average:", average, "Max:", max);
 		console.log();
-		console.log(buildRateChart(result.logs));
-		console.log();
-		console.log("VNode count:");
-		console.log();
-		console.log(buildVNodeCountChart(result.logs));
+
+		if (opts.graphs) {
+			console.log(buildRateChart(result.logs));
+			console.log();
+			console.log("VNode count:");
+			console.log();
+			console.log(buildVNodeCountChart(result.logs));
+			console.log();
+		}
 
 		if (i + 1 < results.length) {
 			console.log();
@@ -173,6 +186,7 @@ sade("react-stats [file]", true)
 	.describe("Collect stats about React usage on a website")
 	.example("https://reactjs.org")
 	.option("-o --output", "File to output results to", "react-stats.json")
+	.option("-g --graphs", "Display graphs related to stats", false)
 	.option("-d --debug", "Enable extra logging and debugging", false)
 	.action(run)
 	.parse(process.argv);
