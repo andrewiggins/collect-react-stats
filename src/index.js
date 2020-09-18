@@ -151,7 +151,7 @@ async function setupCollection(page, logger) {
 			!request.url().startsWith("http") &&
 			!request.url().startsWith("https:")
 		) {
-			logger.warn("SKIPPING NON HTTP(S) URL: " + request.url());
+			logger.warn("Skipping non http(s) URL: " + request.url().slice(0, 100));
 			return request.continue();
 		}
 

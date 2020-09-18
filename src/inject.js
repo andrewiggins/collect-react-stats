@@ -2,7 +2,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { readFileSync } from "fs";
 
-const createElementReturn = /return{\$\$typeof:([a-zA-z]+),type:([a-zA-z]+),key:([a-zA-z]+),ref:([a-zA-z]+),props:([a-zA-z]+),_owner:/;
+const createElementReturn = /return{\$\$typeof:([a-zA-z]+),type:([a-zA-z]+),key:([a-zA-z]+),ref:([a-zA-z]+),props:([a-zA-z]+),_owner:/g;
 
 // @ts-ignore
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
