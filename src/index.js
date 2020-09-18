@@ -1,4 +1,3 @@
-import puppeteer from "puppeteer";
 import fetch from "node-fetch";
 import AbortController from "abort-controller";
 import { containsReact, injectReactCounters } from "./inject.js";
@@ -6,10 +5,10 @@ import { containsReact, injectReactCounters } from "./inject.js";
 let id = 0;
 
 /**
- * @param {() => puppeteer.Browser} getBrowser
+ * @param {() => import('puppeteer-core').Browser} getBrowser
  * @param {Options} options
  */
-function createLogger(getBrowser, options) {
+export function createLogger(getBrowser, options) {
 	return {
 		debug(...args) {
 			if (options.debug) {
@@ -121,7 +120,7 @@ function summarizeStats(statsMap) {
 }
 
 /**
- * @param {puppeteer.Page} page
+ * @param {import('puppeteer-core').Page} page
  * @param {Logger} logger
  * @returns {Promise<() => SummarizedReactStats[]>}
  */
@@ -235,19 +234,13 @@ async function setupCollection(page, logger) {
  *
  * @typedef {ReturnType<createLogger>} Logger
  *
+ * @param {import('puppeteer-core').Browser} browser
  * @param {string} url
  * @param {Options} options
  * @returns {Promise<SummarizedReactStats[]>}
  */
-export async function collectReactStats(url, options) {
-	let browser;
+export async function collectReactStats(browser, url, options) {
 	const logger = createLogger(() => browser, options);
-
-	logger.debug("Launching browser...");
-	browser = await puppeteer.launch({
-		headless: false,
-		defaultViewport: null,
-	});
 
 	const page = await browser.newPage();
 	const pages = await browser.pages();

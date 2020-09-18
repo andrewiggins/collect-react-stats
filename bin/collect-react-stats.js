@@ -5,7 +5,7 @@ import { writeFile, mkdir } from "fs/promises";
 import sade from "sade";
 import tableExport from "table";
 import asciichartExport from "asciichart";
-import { collectReactStats } from "../src/index.js";
+import { collectReactStats, createLogger } from "../src/index.js";
 
 const { table, getBorderCharacters } = tableExport;
 
@@ -109,6 +109,39 @@ function buildVNodeCountChart(logs) {
 }
 
 /**
+ * @param {import('../src/index').Logger} logger
+ * @returns {Promise<import('puppeteer-core').Browser>}
+ */
+async function launchBrowser(logger) {
+	const pptrOptions = {
+		headless: false,
+		defaultViewport: null,
+	};
+
+	try {
+		const puppeteer = (await import("puppeteer")).default;
+		return puppeteer.launch(pptrOptions);
+	} catch (error) {
+		logger.debug(error);
+	}
+
+	console.log("Puppeteer not found. Trying local Chrome installation.");
+
+	const [chromeLauncher, puppeteer] = await Promise.all([
+		import("chrome-launcher").then((m) => m.default),
+		import("puppeteer-core").then((m) => m.default),
+	]);
+
+	const chromePath = chromeLauncher.Launcher.getFirstInstallation();
+	logger.debug("Using Chrome installed at:", chromePath);
+
+	return puppeteer.launch({
+		...pptrOptions,
+		executablePath: chromePath,
+	});
+}
+
+/**
  * @typedef Options
  * @property {boolean} debug
  * @property {string} output
@@ -118,11 +151,18 @@ function buildVNodeCountChart(logs) {
  * @param {Options} opts
  */
 async function run(url, opts) {
-	console.log(
+	/** @type {import('puppeteer-core').Browser} */
+	let browser;
+	const logger = createLogger(() => browser, opts);
+
+	logger.info(
 		"Close the browser when you are finished collecting your sample to see your results."
 	);
 
-	const results = await collectReactStats(url, opts);
+	logger.debug("Launching browser...");
+	browser = await launchBrowser(logger);
+
+	const results = await collectReactStats(browser, url, opts);
 	const resultJSON = JSON.stringify(results, null, 2);
 
 	const outputFile = path.isAbsolute(opts.output)
