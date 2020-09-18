@@ -122,7 +122,9 @@ async function launchBrowser(logger) {
 		const puppeteer = (await import("puppeteer")).default;
 		return puppeteer.launch(pptrOptions);
 	} catch (error) {
-		logger.debug(error);
+		if (error.code !== "ERR_MODULE_NOT_FOUND") {
+			logger.debug(error);
+		}
 	}
 
 	console.log("Puppeteer not found. Trying local Chrome installation.");
