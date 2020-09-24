@@ -41,12 +41,29 @@ export function createLogger(getBrowser, options) {
 }
 
 /**
+ * @param {Row} row
+ * @param {Array<[string, number]>} logs
+ */
+function summarizeRow(row, logs) {
+	for (let [category, count] of logs) {
+		row.total += count;
+
+		if (category in row.data) {
+			row.data[category] += count;
+		} else {
+			row.data[category] = count;
+		}
+	}
+}
+
+/**
  * @typedef {{ total: number; data: Record<string, number> }} Row
  * @typedef {{ total: Row, rows: Record<string, Row> }} Table
  *
  * @typedef ReactStatsSummary
  * @property {Table} vnodes
  * @property {Row} singleChild
+ * @property {Row} domProps
  *
  * @typedef {ReactStats & { summary: ReactStatsSummary }} SummarizedReactStats
  *
@@ -69,6 +86,12 @@ function summarizeStats(statsMap) {
 
 		/** @type {Row} */
 		const singleChildRow = {
+			total: 0,
+			data: {},
+		};
+
+		/** @type {Row} */
+		const domPropsRow = {
 			total: 0,
 			data: {},
 		};
@@ -100,15 +123,8 @@ function summarizeStats(statsMap) {
 				}
 			}
 
-			for (let [category, count] of log.singleChildStats) {
-				singleChildRow.total += count;
-
-				if (category in singleChildRow.data) {
-					singleChildRow.data[category] += count;
-				} else {
-					singleChildRow.data[category] = count;
-				}
-			}
+			summarizeRow(singleChildRow, log.singleChildStats);
+			summarizeRow(domPropsRow, log.domPropStats);
 		}
 
 		summarizedStats.push({
@@ -118,6 +134,7 @@ function summarizeStats(statsMap) {
 			summary: {
 				vnodes: vNodeTable,
 				singleChild: singleChildRow,
+				domProps: domPropsRow,
 			},
 			logs: stats.logs,
 		});
@@ -159,8 +176,13 @@ async function setupCollection(page, logger) {
 
 	page.exposeFunction(
 		"__COLLECT_REACT_STATS__",
-		(id, timing, vNodeStats, singleChildStats) => {
-			statsMap.get(id).logs.push({ timing, vNodeStats, singleChildStats });
+		(id, timing, vNodeStats, singleChildStats, domPropStats) => {
+			statsMap.get(id).logs.push({
+				timing,
+				vNodeStats,
+				singleChildStats,
+				domPropStats,
+			});
 		}
 	);
 
@@ -257,6 +279,7 @@ async function setupCollection(page, logger) {
  * @property {{ start: number; end: number; rate: number; total: number; }} timing
  * @property {Array<[string, [number, number][]]>} vNodeStats
  * @property {Array<[string, number]>} singleChildStats
+ * @property {Array<[string, number]>} domPropStats
  *
  * @typedef Options
  * @property {boolean} debug

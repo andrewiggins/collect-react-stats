@@ -6,6 +6,8 @@ let timeout,
 let vNodeStats = new Map();
 /** @type {Map<string, number>} */
 let singleChildStats = new Map();
+/** @type {Map<string, number>} */
+let domPropStats = new Map();
 
 // TODO: Investigate a way to count text nodes...
 
@@ -39,6 +41,14 @@ function reportVNode__ID__($$typeof, type, key, ref, props) {
 		singleChildStats.set(childCategory, prevCount + 1);
 	}
 
+	// Prop stats
+	if (category == "dom") {
+		const propKeys = Object.keys(props);
+		for (const key of propKeys) {
+			domPropStats.set(key, (domPropStats.get(key) ?? 0) + 1);
+		}
+	}
+
 	if (!timeout) {
 		start = Date.now();
 		timeout = setTimeout(fileReport__ID__, 0);
@@ -49,8 +59,6 @@ function fileReport__ID__() {
 	const serializedVNodeStats = Array.from(
 		vNodeStats.entries()
 	).map(([key, value]) => [key, Array.from(value.entries())]);
-
-	const serializedSingleChildStats = Array.from(singleChildStats.entries());
 
 	let end = Date.now();
 	let duration = end - start;
@@ -67,7 +75,8 @@ function fileReport__ID__() {
 		"__ID__",
 		timing,
 		serializedVNodeStats,
-		serializedSingleChildStats
+		Array.from(singleChildStats.entries()),
+		Array.from(domPropStats.entries())
 	);
 
 	total = 0;
@@ -75,6 +84,7 @@ function fileReport__ID__() {
 	timeout = null;
 	vNodeStats = new Map();
 	singleChildStats = new Map();
+	domPropStats = new Map();
 }
 
 function getVNodeCategory(type) {

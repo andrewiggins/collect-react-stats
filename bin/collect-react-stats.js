@@ -70,13 +70,17 @@ function buildStatsTable(stats) {
 
 /**
  * @param {Row} stats
+ * @param {string[]} [sortedKeys]
  */
-function buildStatsTableFromRow(stats) {
-	const rows = Object.keys(stats.data).sort((a, b) => {
-		const nameA = a.toUpperCase();
-		const nameB = b.toUpperCase();
-		return nameA < nameB ? -1 : nameA > nameB ? 1 : 0;
-	});
+function buildStatsTableFromRow(stats, sortedKeys) {
+	let rows = sortedKeys;
+	if (!rows) {
+		rows = Object.keys(stats.data).sort((a, b) => {
+			const nameA = a.toUpperCase();
+			const nameB = b.toUpperCase();
+			return nameA < nameB ? -1 : nameA > nameB ? 1 : 0;
+		});
+	}
 
 	/** @type {Array<string | number>[]} */
 	const tableData = [["Type", "Total"]];
@@ -196,13 +200,23 @@ async function run(url, opts) {
 		console.log();
 		console.log("Results for", result.frameUrl);
 		console.log();
+
 		console.log("Render Frequency:");
 		console.log(
 			"(Columns are number of children. Data is number of times that type rendered with that number of children)"
 		);
 		console.log(buildStatsTable(result.summary.vnodes));
+
 		console.log("Single child type:");
 		console.log(buildStatsTableFromRow(result.summary.singleChild));
+
+		console.log("Top 20 DOM props:");
+		const domPropsData = result.summary.domProps.data;
+		const keys = Object.keys(domPropsData)
+			.sort((key1, key2) => domPropsData[key2] - domPropsData[key1]) // reverse sort largest to smallest
+			.slice(0, 20);
+		console.log(buildStatsTableFromRow(result.summary.domProps, keys));
+
 		console.log();
 		console.log("VNode creation rate:");
 		console.log("Min:", min, "Average:", average, "Max:", max);
