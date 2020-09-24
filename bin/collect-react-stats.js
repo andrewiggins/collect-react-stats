@@ -210,7 +210,7 @@ async function run(url, opts) {
 		console.log("Single child type:");
 		console.log(buildStatsTableFromRow(result.summary.singleChild));
 
-		console.log("Top 20 DOM props:");
+		console.log("Top 20 props passed to DOM VNodes:");
 		const domPropsData = result.summary.domProps.data;
 		const keys = Object.keys(domPropsData)
 			.sort((key1, key2) => domPropsData[key2] - domPropsData[key1]) // reverse sort largest to smallest
