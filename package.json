@@ -1,7 +1,7 @@
 {
   "name": "collect-react-stats",
   "type": "module",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "CLI to collect stats about React usage on a website",
   "main": "src/index.js",
   "bin": "bin/collect-react-stats.js",
