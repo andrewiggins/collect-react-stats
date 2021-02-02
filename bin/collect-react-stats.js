@@ -83,12 +83,16 @@ function buildStatsTableFromRow(stats, sortedKeys) {
 	}
 
 	/** @type {Array<string | number>[]} */
-	const tableData = [["Type", "Total"]];
+	const tableData = [["Type", "Total", "Percent"]];
 	for (let row of rows) {
-		tableData.push([row, stats.data[row]]);
+		tableData.push([
+			row,
+			stats.data[row],
+			((stats.data[row] / stats.total) * 100).toFixed(2) + "%",
+		]);
 	}
 
-	tableData.push(["Total", stats.total]);
+	tableData.push(["Total", stats.total, "100%"]);
 
 	return table(tableData, { border: getBorderCharacters("norc") });
 }
@@ -210,11 +214,15 @@ async function run(url, opts) {
 		console.log("Single child type:");
 		console.log(buildStatsTableFromRow(result.summary.singleChild));
 
-		console.log("Top 20 props passed to DOM VNodes:");
+		console.log(">1% props passed to DOM VNodes (min: 20, max 30):");
 		const domPropsData = result.summary.domProps.data;
+		const domPropsTotal = result.summary.domProps.total;
 		const keys = Object.keys(domPropsData)
 			.sort((key1, key2) => domPropsData[key2] - domPropsData[key1]) // reverse sort largest to smallest
-			.slice(0, 20);
+			.slice(0, 30)
+			.filter((key, i) => {
+				return i < 20 || domPropsData[key] / domPropsTotal >= 0.01;
+			});
 		console.log(buildStatsTableFromRow(result.summary.domProps, keys));
 
 		console.log();
